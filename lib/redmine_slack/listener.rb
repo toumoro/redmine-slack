@@ -25,7 +25,7 @@ class Listener < Redmine::Hook::Listener
 			:short => true
 		}, {
 			:title => I18n.t("field_assigned_to"),
-			:value => escape(issue.assigned_to.to_s),
+			:value => "<@#{escape(User.find(issue.assigned_to_id).custom_field_value(UserCustomField.find_by_name("Slack Userid")).to_s) if issue.assigned_to}|cal> #{escape issue.assigned_to.to_s}",
 			:short => true
 		}]
 
@@ -38,6 +38,11 @@ class Listener < Redmine::Hook::Listener
 		speak msg, channel, attachment, url
 	end
 
+	def redmine_slack_issues_edit_before_save(context={})
+		issue = context[:issue]
+		$initialObj = Issue.find_by_id(issue.id)
+	end
+
 	def redmine_slack_issues_edit_after_save(context={})
 		issue = context[:issue]
 		journal = context[:journal]
@@ -45,6 +50,40 @@ class Listener < Redmine::Hook::Listener
 		channel = channel_for_project issue.project
 		url = url_for_project issue.project
 
+		send = false
+		if $initialObj
+
+			if $initialObj.status_id != issue.status_id
+				send = true
+			elsif $initialObj.priority_id != issue.priority_id
+				send = true
+			elsif $initialObj.description != issue.description
+				send = true
+			elsif $initialObj.assigned_to_id != issue.assigned_to_id
+				send = true
+			elsif journal.notes != '' && !journal.notes.nil?
+				send = true
+			end
+			if send
+				Rails.logger.warn('Redmine Slack')
+				Rails.logger.warn('  Status ID:')
+				Rails.logger.warn('    Initial: %s' % [$initialObj.status_id.to_s])
+				Rails.logger.warn('    New: %s' % [issue.status_id.to_s])
+				Rails.logger.warn('  Priority ID:')
+				Rails.logger.warn('    Initial: %s' % [$initialObj.priority_id.to_s])
+				Rails.logger.warn('    New: %s' % [issue.priority_id.to_s])
+				Rails.logger.warn('  Description:')
+				Rails.logger.warn('    Initial: %s' % [$initialObj.description.to_s])
+				Rails.logger.warn('    New: %s' % [issue.description.to_s])
+				Rails.logger.warn('  Assigned ID:')
+				Rails.logger.warn('    Initial: %s' % [$initialObj.assigned_to_id.to_s])
+				Rails.logger.warn('    New: %s' % [issue.assigned_to_id.to_s])
+				Rails.logger.warn('  Journal:')
+				Rails.logger.warn('    Notes: %s' % [journal.notes.to_s])
+			end
+		end
+		
+		return if !send
 		return unless channel and url and Setting.plugin_redmine_slack['post_updates'] == '1'
 		return if issue.is_private?
 		return if journal.private_notes?
@@ -258,7 +297,7 @@ private
 			value = escape category.to_s
 		when "assigned_to"
 			user = User.find(detail.value) rescue nil
-			value = escape user.to_s
+            value = "<@#{escape user.custom_field_value(UserCustomField.find_by_name("Slack Userid")) if user}|cal> #{escape user.to_s}"
 		when "fixed_version"
 			version = Version.find(detail.value) rescue nil
 			value = escape version.to_s
