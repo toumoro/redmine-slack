@@ -50,9 +50,12 @@ module RedmineKalvadSlack
         attachment[:text] = escape(issue.description)
       end
 
+      text = "[#{project_link(project)}] #{slack_link(url, "##{issue.id}")} " \
+             "#{l(:label_kalvad_slack_issue_created, user: escape(issue.author.name))}"
+      text << mentions(issue.description)
+
       {
-        text: "[#{project_link(project)}] #{slack_link(url, "##{issue.id}")} " \
-              "#{l(:label_kalvad_slack_issue_created, user: escape(issue.author.name))}",
+        text: text,
         attachments: [attachment]
       }
     end
@@ -73,9 +76,12 @@ module RedmineKalvadSlack
       note = note_text(journal, setting)
       attachment[:text] = note if note.present?
 
+      text = "[#{project_link(project)}] #{slack_link(url, "##{issue.id}")} " \
+             "#{l(label_key, user: escape(journal.user&.name.to_s))}"
+      text << mentions(journal.notes)
+
       {
-        text: "[#{project_link(project)}] #{slack_link(url, "##{issue.id}")} " \
-              "#{l(label_key, user: escape(journal.user&.name.to_s))}",
+        text: text,
         attachments: [attachment]
       }
     end
@@ -185,7 +191,18 @@ module RedmineKalvadSlack
       return '' if value.nil?
 
       finder = ATTR_FINDERS[prop_key.to_s]
-      finder ? finder.find_by(id: value)&.name.to_s : value.to_s
+      return value.to_s unless finder
+
+      obj = finder.find_by(id: value)
+      return '' unless obj
+
+      # For assigned_to, include Slack @mention if available
+      if prop_key.to_s == 'assigned_to_id' && obj.is_a?(User)
+        sid = slack_user_id(obj)
+        return sid.present? ? "<@#{sid}> #{obj.name}" : obj.name
+      end
+
+      obj.name.to_s
     end
 
     def cf_field(detail)
@@ -226,7 +243,11 @@ module RedmineKalvadSlack
     end
 
     def assignee_value(issue)
-      issue.assigned_to ? escape(issue.assigned_to.name) : '-'
+      user = issue.assigned_to
+      return '-' unless user
+
+      sid = slack_user_id(user)
+      sid.present? ? "<@#{sid}> #{escape(user.name)}" : escape(user.name)
     end
 
     def project_link(project)
@@ -268,6 +289,34 @@ module RedmineKalvadSlack
 
     def l(key, **)
       I18n.t(key, **)
+    end
+
+    # @mentions support — extracts @username patterns from text and formats
+    # them as a "To: @user1, @user2" suffix for the Slack message.
+    def mentions(text)
+      return '' if text.nil?
+
+      names = extract_usernames(text)
+      names.present? ? "\nTo: #{names.join(', ')}" : ''
+    end
+
+    def extract_usernames(text)
+      return [] if text.nil?
+
+      # Slack usernames: lowercase letters, numbers, dashes, underscores;
+      # must start with a letter or number.
+      text.scan(/@[a-z0-9][a-z0-9_\-]*/).uniq
+    end
+
+    # Looks up a user's Slack user ID from the "Slack Userid" custom field.
+    # Returns the ID string or nil.
+    def slack_user_id(user)
+      return nil unless user
+
+      cf = UserCustomField.find_by(name: 'Slack Userid')
+      return nil unless cf
+
+      user.custom_field_value(cf).presence
     end
   end
 end
