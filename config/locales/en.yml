@@ -28,7 +28,7 @@ en:
   setting_kalvad_slack_display_watchers: Display watchers
   setting_kalvad_slack_display_description_on_create: Include description on creation
 
-  text_kalvad_slack_channel_required: 'e.g. #redmine. Required to enable notifications.'
+  text_kalvad_slack_channel_help: 'e.g. #redmine. Optional — the webhook default channel is used if blank.'
   text_kalvad_slack_icon_help: 'Either a :emoji: code or an HTTPS URL.'
 
   activerecord:

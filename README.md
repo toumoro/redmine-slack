@@ -20,6 +20,11 @@ settings page.
 - Per-project webhook URL, channel, posted-as username, and icon.
 - Per-event boolean toggles, plus privacy gates for private issues and
   private notes.
+- @mentions: extracts `@username` from issue descriptions and journal notes,
+  appends them to the Slack message so mentioned users are notified.
+- Slack user mentions in assignee fields: when a user has a `Slack Userid`
+  custom field set, their assignment triggers a real `<@SLACK_ID>` mention
+  in the notification.
 - Net::HTTP delivery with hardcoded 3 second open and read timeouts.
 - English and French locales.
 
@@ -111,6 +116,29 @@ per-project tab. Set under `Administration -> Roles and permissions`.
 A project posts to Slack only if all of these are true: a `KalvadSlackSetting`
 row exists, `enabled` is on, the webhook URL is non-blank, and the channel is
 non-blank and not `-`.
+
+## @Mentions
+
+The plugin supports two forms of Slack @mentions:
+
+### 1. Inline @username in text
+
+When an issue description or journal note contains `@username` patterns (e.g.
+`@john.doe`), they are extracted and appended to the Slack message as
+"To: @john.doe". This relies on Slack's `link_names` parameter to resolve
+usernames to real mentions.
+
+### 2. Assignee Slack user ID
+
+If a Redmine user has the `Slack Userid` custom field populated with their
+Slack member ID (e.g. `U01ABCDEF`), the assignee field in notifications will
+use `<@U01ABCDEF>` format, triggering a direct Slack mention/notification.
+
+To set this up:
+1. Go to `Administration -> Custom fields -> Users`
+2. Ensure a field named **Slack Userid** exists (type: User, format: text)
+3. Each user fills in their Slack member ID (found in their Slack profile
+   under "More" -> "Copy member ID")
 
 ## Events
 
