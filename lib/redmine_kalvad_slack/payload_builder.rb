@@ -179,7 +179,15 @@ module RedmineKalvadSlack
       label = attr_label(detail.prop_key)
       old_v = attr_format(detail.prop_key, detail.old_value)
       new_v = attr_format(detail.prop_key, detail.value)
-      { title: escape(label), value: format_change(old_v, new_v), short: true }
+
+      # assigned_to may contain pre-formatted Slack mentions — skip escaping
+      if detail.prop_key.to_s == 'assigned_to_id'
+        value = format_change_raw(old_v, new_v)
+      else
+        value = format_change(old_v, new_v)
+      end
+
+      { title: escape(label), value: value, short: true }
     end
 
     def attr_label(prop_key)
@@ -228,6 +236,16 @@ module RedmineKalvadSlack
         "~#{escape(old_v)}~"
       else
         "~#{escape(old_v)}~ -> *#{escape(new_v)}*"
+      end
+    end
+
+    def format_change_raw(old_v, new_v)
+      if old_v.blank?
+        new_v
+      elsif new_v.blank?
+        "~#{old_v}~"
+      else
+        "~#{old_v}~ -> #{new_v}"
       end
     end
 
