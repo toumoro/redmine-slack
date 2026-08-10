@@ -26,10 +26,10 @@ module RedmineKalvadSlack
 
     def build_body
       body = @payload.merge(
-        channel: @setting.channel,
         username: @setting.username.presence || 'Redmine',
         link_names: 1
       )
+      body[:channel] = @setting.channel if @setting.channel.present?
       icon = @setting.icon.to_s
       if icon.start_with?(':')
         body[:icon_emoji] = icon

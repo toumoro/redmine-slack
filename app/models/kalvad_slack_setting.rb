@@ -27,6 +27,6 @@ class KalvadSlackSetting < ApplicationRecord
   end
 
   def deliverable?
-    enabled? && webhook_url.present? && channel.present? && channel != '-'
+    enabled? && webhook_url.present? && channel.to_s != '-'
   end
 end
