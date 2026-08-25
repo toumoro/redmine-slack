@@ -13,7 +13,7 @@ fr:
   label_kalvad_slack_news_created: 'annonce publiée par %{user}'
 
   setting_kalvad_slack_webhook_url: URL du webhook Slack
-  setting_kalvad_slack_channel: Salon
+  setting_kalvad_slack_channel: Canal
   setting_kalvad_slack_username: Nom d''affichage
   setting_kalvad_slack_icon: Icône
   setting_kalvad_slack_enabled: Activé
