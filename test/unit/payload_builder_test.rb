@@ -51,6 +51,26 @@ class KalvadSlackPayloadBuilderTest < RedmineKalvadSlack::TestCase
     assert_equal news.title, att[:title]
   end
 
+  # Redmine records a subtask add/remove on the parent issue as an 'attr' detail
+  # keyed 'child_id'; it used to fall through to humanize and read "Child".
+  def test_subtask_change_is_labelled_like_core
+    issue = Issue.find(1)
+    journal = Journal.create!(journalized: issue, user: User.find(1))
+    journal.details << JournalDetail.new(property: 'attr', prop_key: 'child_id',
+                                         old_value: nil, value: '5')
+    field = RedmineKalvadSlack::PayloadBuilder.journal_fields(journal).first
+    assert_equal I18n.t(:label_subtask), field[:title]
+    assert_equal '*#5*', field[:value]
+  end
+
+  def test_parent_change_renders_issue_id_with_hash
+    field = RedmineKalvadSlack::PayloadBuilder.attr_field(
+      JournalDetail.new(property: 'attr', prop_key: 'parent_id', old_value: '2', value: '3')
+    )
+    assert_equal I18n.t(:field_parent_issue), field[:title]
+    assert_equal '~#2~ -> *#3*', field[:value]
+  end
+
   def test_escape_handles_brackets
     assert_equal '&lt;a&gt; &amp; &lt;b&gt;', RedmineKalvadSlack::PayloadBuilder.escape('<a> & <b>')
   end
