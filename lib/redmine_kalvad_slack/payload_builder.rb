@@ -15,12 +15,18 @@ module RedmineKalvadSlack
       'tracker_id' => :field_tracker,
       'project_id' => :field_project,
       'parent_id' => :field_parent_issue,
+      # Redmine journalizes a subtask add/remove on the *parent* issue as an
+      # 'attr' detail keyed 'child_id' (Issue#create_parent_issue_journal).
+      'child_id' => :label_subtask,
       'start_date' => :field_start_date,
       'due_date' => :field_due_date,
       'estimated_hours' => :field_estimated_hours,
       'done_ratio' => :field_done_ratio,
       'is_private' => :field_is_private
     }.freeze
+
+    # Attributes whose value is an issue id; core renders these as "#123".
+    ISSUE_ID_ATTRS = %w[parent_id child_id].freeze
 
     ATTR_FINDERS = {
       'status_id' => IssueStatus,
@@ -198,14 +204,17 @@ module RedmineKalvadSlack
     def attr_format(prop_key, value)
       return '' if value.nil?
 
-      finder = ATTR_FINDERS[prop_key.to_s]
+      key = prop_key.to_s
+      return "##{value}" if ISSUE_ID_ATTRS.include?(key) && value.to_s.present?
+
+      finder = ATTR_FINDERS[key]
       return value.to_s unless finder
 
       obj = finder.find_by(id: value)
       return '' unless obj
 
       # For assigned_to, include Slack @mention if available
-      if prop_key.to_s == 'assigned_to_id' && obj.is_a?(User)
+      if key == 'assigned_to_id' && obj.is_a?(User)
         sid = slack_user_id(obj)
         return sid.present? ? "<@#{sid}> #{obj.name}" : obj.name
       end
