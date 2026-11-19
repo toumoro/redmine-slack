@@ -11,6 +11,8 @@ fr:
   label_kalvad_slack_wiki_created: 'page wiki créée par %{user}'
   label_kalvad_slack_wiki_updated: 'page wiki mise à jour par %{user}'
   label_kalvad_slack_news_created: 'annonce publiée par %{user}'
+  label_kalvad_slack_attachment_added: 'Fichier ajouté'
+  label_kalvad_slack_attachment_deleted: 'Fichier supprimé'
 
   setting_kalvad_slack_webhook_url: URL du webhook Slack
   setting_kalvad_slack_channel: Canal

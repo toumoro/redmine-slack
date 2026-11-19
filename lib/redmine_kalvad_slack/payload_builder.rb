@@ -233,7 +233,7 @@ module RedmineKalvadSlack
     def attachment_field(detail)
       filename = detail.value.to_s
       added = detail.value.present? && detail.old_value.blank?
-      title = added ? l(:label_attachment_added) : l(:label_attachment_deleted)
+      title = added ? l(:label_kalvad_slack_attachment_added) : l(:label_kalvad_slack_attachment_deleted)
       value = added ? "`#{escape(filename)}`" : "~#{escape(detail.old_value.to_s)}~"
       { title: escape(title), value: value, short: false }
     end
