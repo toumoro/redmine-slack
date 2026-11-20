@@ -39,8 +39,21 @@ module RedmineKalvadSlack
         return false unless setting&.enabled?
         return false if is_private? && !setting.post_private_issues?
         return false if current_journal.private_notes? && !setting.post_private_notes?
+        return false if kalvad_slack_bot_note_only?
 
         true
+      end
+
+      # A note the n8n automation account posts on its own (the auto-acknowledgement
+      # sent to the client) is noise in Slack. Anything else it does — a status or
+      # assignee change, an attachment — still posts, note included. The account is
+      # the one chosen in the redmine_n8n_webhook settings; without that plugin,
+      # nothing is skipped.
+      def kalvad_slack_bot_note_only?
+        return false unless defined?(RedmineN8nWebhook) && RedmineN8nWebhook.respond_to?(:bot_user?)
+        return false unless RedmineN8nWebhook.bot_user?(current_journal.user)
+
+        current_journal.details.empty?
       end
 
       def build_kalvad_slack_update_payload(setting)
