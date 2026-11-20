@@ -71,6 +71,26 @@ class KalvadSlackPayloadBuilderTest < RedmineKalvadSlack::TestCase
     assert_equal '~#2~ -> *#3*', field[:value]
   end
 
+  # Core Redmine has no label_attachment_added/_deleted; using them rendered
+  # "Translation missing: fr.label_attachment_added" in Slack.
+  def test_attachment_added_and_deleted_are_translated
+    %w[en fr].each do |locale|
+      I18n.with_locale(locale) do
+        added = RedmineKalvadSlack::PayloadBuilder.attachment_field(
+          JournalDetail.new(property: 'attachment', prop_key: '1', old_value: nil, value: 'a.png')
+        )
+        deleted = RedmineKalvadSlack::PayloadBuilder.attachment_field(
+          JournalDetail.new(property: 'attachment', prop_key: '1', old_value: 'a.png', value: nil)
+        )
+        [added, deleted].each { |f| assert_not_includes f[:title], 'Translation missing' }
+        assert_equal I18n.t(:label_kalvad_slack_attachment_added), added[:title]
+        assert_equal I18n.t(:label_kalvad_slack_attachment_deleted), deleted[:title]
+        assert_equal '`a.png`', added[:value]
+        assert_equal '~a.png~', deleted[:value]
+      end
+    end
+  end
+
   def test_escape_handles_brackets
     assert_equal '&lt;a&gt; &amp; &lt;b&gt;', RedmineKalvadSlack::PayloadBuilder.escape('<a> & <b>')
   end
